@@ -5,9 +5,8 @@
       <h2 class="heading">Mon Profil</h2>
 
       <div class="profile-photo-section">
-        <img :src=" profilePhoto || require('@/assets/user.jpg')" alt="Photo de profil" class="profile-photo" />
-        <input type="file" @change="onPhotoChange" class="input" />
-        <button @click="uploadPhoto" class="login-button">Changer photo de profil</button>
+        <img :src="require('@/assets/user.jpg')" alt="Photo de profil" class="profile-photo" />
+       
       </div>
       
     <!--affichage des informations de l'utilisateur -->
@@ -325,7 +324,7 @@ async renderChart() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 50px;
 }
 
 .profile-photo {
@@ -333,7 +332,7 @@ async renderChart() {
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 15px;
+  margin-bottom: 30px;
 }
 
 .input {

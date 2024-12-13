@@ -50,7 +50,7 @@ router.get('/tasks', isAuthenticated, (req, res) => {
     SELECT * 
     FROM tasks
     WHERE user_id = ? AND DATE(due_date) = CURDATE()  
-      AND (status = 'pas commence' OR status = 'en cours' OR status = 'termine')
+      AND (status = 'pas commence' OR status = 'en cours')
     ORDER BY FIELD(priority, 'urgent', 'important', 'moins important')
   `;
 
@@ -196,9 +196,16 @@ router.put('/tasks/:id', isAuthenticated, (req, res) => {
     updates.push('priority = ?');
     values.push(priority);
   }
-  if (status) {
-    updates.push('status = ?');
+  if (status === "termine") {
+    updates.push("status = ?");
     values.push(status);
+    updates.push("completed_date = NOW()");
+  } else {
+    // If status isn't being updated to "termine", don't change the completed_date
+    if (status) {
+      updates.push("status = ?");
+      values.push(status);
+    }
   }
 
   if (updates.length === 0) {
@@ -207,7 +214,7 @@ router.put('/tasks/:id', isAuthenticated, (req, res) => {
 
   const updateQuery = `
     UPDATE tasks 
-    SET ${updates.join(', ')} 
+    SET ${updates.join(', ')} ,completed_date = NOW()
     WHERE id = ?;
   `;
   values.push(taskId);
@@ -227,7 +234,6 @@ router.put('/tasks/:id', isAuthenticated, (req, res) => {
   });
 });
 
-
 // Endpoint to update the status of a task to 'termine' for the logged-in user
 router.put('/tasks/complete/:id', isAuthenticated, (req, res) => {
   const userId = req.session.userId; // Get the logged-in user's ID from the session
@@ -246,11 +252,11 @@ router.put('/tasks/complete/:id', isAuthenticated, (req, res) => {
     }
 
     // If the task belongs to the user, proceed to update the status
-    const query = 'UPDATE tasks SET status = "termine", completed = 1 WHERE id = ?';
+    const query = 'UPDATE tasks SET status = "termine", completed_date = NOW() WHERE id = ?';
     
     db.query(query, [taskId], (err, results) => {
       if (err) {
-        console.error(err);
+        console.error('Error updating task status:', err);
         res.status(500).send('Error updating task status');
       } else if (results.affectedRows === 0) {
         res.status(404).send('Task not found');
@@ -261,20 +267,42 @@ router.put('/tasks/complete/:id', isAuthenticated, (req, res) => {
   });
 });
 
-
 // Endpoint to get completed tasks
 router.get('/history', (req, res) => {
-  const query = 'SELECT * FROM tasks WHERE status = "termine"';
+  const query = 'SELECT * FROM tasks WHERE status = "termine" ORDER BY completed_date DESC';
   
   db.query(query, (err, results) => {
     if (err) {
       console.error(err);
       res.status(500).send('Error fetching tasks');
     } else {
-      res.json(results);
+      // Group tasks by completed_date
+      const groupedTasks = results.reduce((groups, task) => {
+        const completedDate = task.completed_date;
+
+        // Check if completed_date is valid and a string, and if not, handle gracefully
+        let date = 'Date inconnue'; // Default value for invalid dates
+        if (completedDate && typeof completedDate === 'string') {
+          // If it's a string, extract the date part
+          date = completedDate.split("T")[0]; 
+        } else if (completedDate instanceof Date) {
+          // If it's a Date object, format it
+          date = completedDate.toISOString().split("T")[0];
+        }
+
+        // Group tasks by date
+        if (!groups[date]) {
+          groups[date] = [];
+        }
+        groups[date].push(task);
+        return groups;
+      }, {});
+
+      res.json(groupedTasks); // Send grouped tasks to the frontend
     }
   });
 });
+
 
 // Endpoint to get deleted tasks=> trashh
 router.get('/deleted', (req, res) => {
@@ -333,43 +361,6 @@ router.put("/restore/:id", (req, res) => {
 
     res.send({ message: "Task restored successfully.", taskId, status: newStatus });
   });
-});
-
-// Route pour modifier le statut a termine d'une tâche pour l'utilisateur connecté
-router.put("/tasks/:id/status", isAuthenticated, async (req, res) => {
-  const taskId = req.params.id;
-  const { completed } = req.body;
-  const userId = req.session.userId; // Get the user ID from the session
-
-  // Determine the new status based on `completed`
-  const newStatus = completed ? "terminé" : "pas commencé";
-
-  try {
-    // Check if the task belongs to the logged-in user
-    const taskOwnershipQuery = "SELECT * FROM tasks WHERE id = ? AND user_id = ?";
-    const [taskResult] = await db.query(taskOwnershipQuery, [taskId, userId]);
-
-    if (taskResult.length === 0) {
-      return res.status(403).json({ error: "You are not authorized to update this task." });
-    }
-
-    // Update the task status in the database
-    const query = "UPDATE tasks SET status = ? WHERE id = ?";
-    const result = await db.query(query, [newStatus, taskId]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: "Task not found." });
-    }
-
-    res.status(200).json({
-      message: "Task status updated successfully.",
-      taskId,
-      newStatus,
-    });
-  } catch (error) {
-    console.error("Error updating task status:", error);
-    res.status(500).json({ error: "An error occurred while updating the task status." });
-  }
 });
 
 

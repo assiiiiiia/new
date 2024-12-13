@@ -11,7 +11,7 @@ import ProfilView from '@/views/ProfilView.vue';
 import TodoCalendar from '@/views/TodoCalendar.vue';
 import CategoryView from '@/views/CategoryView.vue';
 import TrashView from '@/views/TrashView.vue';
-
+import HistoryView from '@/views/HistoryView.vue';
 const routes = [
   {
     path: '/',
@@ -78,6 +78,12 @@ const routes = [
     path: '/trash',
     name: 'TrashView',
     component: TrashView, 
+   
+  },
+  {
+    path: '/History',
+    name: 'HistoryView',
+    component: HistoryView, 
    
   },
   // Allows the `id` to be passed as a prop to the component

@@ -117,6 +117,7 @@ export default {
     },
     
   handleDeleteClick() {
+    
     // Send the request to update the task status to 'annule'
     axios.put(`http://localhost:3000/api/tasks/cancel/${this.task.id}`)
       .then(response => {
@@ -133,6 +134,7 @@ export default {
   },
   
   markTaskCompleted(event) {
+ 
   const isChecked = event.target.checked;
 
   if (isChecked) {
@@ -144,7 +146,7 @@ export default {
         // Update the task locally
         this.$emit("update-task", {
           ...this.task,
-          completed: true,
+          completed:true,
           status: "termine"
         });
         
@@ -162,6 +164,8 @@ export default {
     console.log('Unchecked task:', this.task.id);
   }
 },},
+
+
   mounted() {
     this.$nextTick(() => {
       console.log("TaskDisplay component is mounted and ready");
